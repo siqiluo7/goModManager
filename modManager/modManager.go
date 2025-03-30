@@ -32,7 +32,9 @@ func GetDependencies() []dependency {
 		if err := decoder.Decode(&mod); err != nil {
 			panic(err)
 		}
-		if version, ok := mod["Version"]; ok && regex.MatchString(version.(string)) {
+		fmt.Println("Path", mod)
+		if version, ok := mod["Version"]; ok {
+			fmt.Println("matched", version, regex.MatchString(version.(string)))
 			deps = append(deps, dependency{path: mod["Path"].(string), version: version.(string)})
 		}
 	}
