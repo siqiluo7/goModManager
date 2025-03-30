@@ -1,5 +1,5 @@
 package testModule
 
 func Test() {
-	println("Test")
+	println("Test v1.0.0")
 }
