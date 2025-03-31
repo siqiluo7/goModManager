@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strings"
 
-	test "github.com/goModManager/testModule"
+	test "github.com/siqiluo7/goModManager/testModule"
 )
 
 type dependency struct {

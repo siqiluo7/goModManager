@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/goModManager/modManager"
+	"github.com/siqiluo7/goModManager/modManager"
 )
 
 func main() {
