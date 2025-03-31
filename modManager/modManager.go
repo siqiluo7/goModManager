@@ -6,6 +6,8 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+
+	test "github.com/goModManager/testModule"
 )
 
 type dependency struct {
@@ -14,6 +16,7 @@ type dependency struct {
 }
 
 func GetDependencies() []dependency {
+	test.Test()
 	cmd := exec.Command("go", "list", "-m", "-json", "all")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
