@@ -1,3 +1,3 @@
-module github.com/goModManager/testModule
+module github.com/siqiluo7/goModManager/testModule
 
 go 1.24.1
