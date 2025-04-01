@@ -7,7 +7,13 @@ import (
 )
 
 func main() {
-	fmt.Println("Hello World")
-	modManager.GetDependencies()
+	path := modManager.GetAllModFiles()
+	for _, p := range path {
+		deps := modManager.GetDependenciesFromModFile(p)
+		for _, dep := range deps {
+			fmt.Println("dep", dep.Name, dep.Version)
+
+		}
+	}
 
 }

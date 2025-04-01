@@ -1,46 +1,81 @@
 package modManager
 
 import (
-	"encoding/json"
-	"fmt"
+	"bufio"
+	"bytes"
+	"io/fs"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strings"
 
 	test "github.com/siqiluo7/goModManager/testModule"
 )
 
-type dependency struct {
-	path    string
-	version string
+type Dependency struct {
+	path          string
+	Version       string
+	PseudoVersion string
+	Name          string
+	moduleName    string
 }
 
-func GetDependencies() []dependency {
+// Regex to match pseudo versions (v0.0.0-<YYYYMMDDHHMMSS>-<commit-hash>)
+var pseudoVersionRegex = regexp.MustCompile(`([a-zA-Z0-9./_-]+) (v0.0.0-\d{14}-[a-f0-9]+)`)
+
+func GetAllModFiles() []string {
 	test.Test()
-	cmd := exec.Command("go", "list", "-m", "-json", "all")
-	out, err := cmd.CombinedOutput()
+	modPath := []string{}
+	rootPath := getRepoRoot()
+	filepath.Walk(rootPath+"/", func(path string, info fs.FileInfo, err error) error {
+
+		if err != nil {
+			return err
+		}
+		if info.Name() == "go.mod" {
+			modPath = append(modPath, path)
+		}
+		return nil
+	})
+	return modPath
+}
+
+func GetDependenciesFromModFile(modPath string) []Dependency {
+	file, err := os.Open(modPath)
 	if err != nil {
-		fmt.Println("Error", err, out)
 		panic(err)
 	}
-	decoder := json.NewDecoder(strings.NewReader(string(out)))
-	fmt.Println("mod", string(out))
-	regex, err := regexp.Compile(`v\d+\.\d+\.\d+(-[a-zA-Z0-9.]+)?-\d{14}-[a-f0-9]+`)
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	var moduleName string
+	var dependencies []Dependency
+
+	for scanner.Scan() {
+		text := scanner.Text()
+		if strings.HasPrefix(text, "module") {
+			moduleName = strings.Split(text, " ")[1]
+		}
+
+		matches := pseudoVersionRegex.FindStringSubmatch(text)
+		if matches != nil {
+			dependencies = append(dependencies, Dependency{moduleName: moduleName, Name: matches[0], path: matches[1], PseudoVersion: matches[2]})
+		}
+
+	}
+	return dependencies
+
+}
+
+func getRepoRoot() string {
+	cmd := exec.Command("git", "rev-parse", "--show-toplevel")
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	err := cmd.Run()
 	if err != nil {
 		panic(err)
 	}
-	var deps []dependency
-	for decoder.More() {
-		var mod map[string]interface{}
-		if err := decoder.Decode(&mod); err != nil {
-			panic(err)
-		}
-		fmt.Println("Path", mod)
-		if version, ok := mod["Version"]; ok {
-			fmt.Println("matched", version, regex.MatchString(version.(string)))
-			deps = append(deps, dependency{path: mod["Path"].(string), version: version.(string)})
-		}
-	}
-	fmt.Println("deps", deps)
-	return deps
+
+	return strings.TrimSpace(out.String())
 }
