@@ -70,22 +70,52 @@ func GetDependenciesFromModFile(modPath string) []Dependency {
 }
 
 func CheckIfPseudoVersionValid(dep Dependency) (bool, error) {
-	regex := regexp.MustCompile(`v0.0.0-\d{14}-[a-f0-9]+`)
-	matches := regex.FindStringSubmatch(dep.PseudoVersion)
-	if matches == nil {
-		fmt.Println("Invalid pseudo version for dependency", dep.URL)
+	harshCommit := exactPseudoVersion(dep)
+	repoUrl := extractRepoURL(dep)
+	valid, err := checkIfCommitExists(repoUrl, harshCommit)
+	if err != nil {
+		return false, err
 	}
-	harshCommit := matches[1]
-	cmd := exec.Command("git", "ls-remote", "https://"+dep.URL, harshCommit)
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	err := cmd.Run()
-	cmd.search.NewMatch(arg)
+	return valid, nil
+}
+
+func checkIfCommitExists(repoUrl string, commitHash string) (bool, error) {
+	cmd := exec.Command("git", "ls-remote", "https://"+repoUrl)
+	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return false, err
 	}
 
-	return out.String(), nil
+	res := strings.TrimSpace(string(output))
+	for _, line := range strings.Split(res, "\n") {
+		if strings.Contains(line, commitHash) {
+			fmt.Println("Valid pseudo version for dependency")
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func exactPseudoVersion(dep Dependency) string {
+	regex := regexp.MustCompile(`v0.0.0-(\d{14})-([a-f0-9]+)`)
+	matches := regex.FindStringSubmatch(dep.PseudoVersion)
+	if matches == nil {
+		fmt.Println("Invalid pseudo version for dependency", dep.URL)
+	}
+	// fmt.Println("checking version....", dep.URL, matches)
+	return matches[2]
+}
+
+func extractRepoURL(dep Dependency) string {
+	// Define regex pattern to capture "github.com/user/repo"
+	re := regexp.MustCompile(`^(github\.com/[^/]+/[^/]+)`)
+
+	matches := re.FindStringSubmatch(dep.URL)
+	// fmt.Println("matches.......", matches)
+	if len(matches) > 1 {
+		return matches[1]
+	}
+	return ""
 }
 
 func getRepoRoot() string {

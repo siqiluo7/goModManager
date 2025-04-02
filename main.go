@@ -11,8 +11,8 @@ func main() {
 	for _, p := range path {
 		deps := modManager.GetDependenciesFromModFile(p)
 		for _, dep := range deps {
-			fmt.Println("dep", dep.Name, dep.Version)
-
+			fmt.Println("dep", dep.URL, dep.Version)
+			modManager.CheckIfPseudoVersionValid(dep)
 		}
 	}
 
