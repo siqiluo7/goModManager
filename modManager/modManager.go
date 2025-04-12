@@ -76,7 +76,15 @@ func CheckIfPseudoVersionValid(dep Dependency) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return valid, nil
+	if !valid {
+		return false, nil
+	}
+
+	isCommitMerged, err := isCommitMerged(repoUrl, harshCommit)
+	if err != nil {
+		return false, err
+	}
+	return !isCommitMerged, nil
 }
 
 func checkIfCommitExists(repoUrl string, commitHash string) (bool, error) {
@@ -128,4 +136,24 @@ func getRepoRoot() string {
 	}
 
 	return strings.TrimSpace(out.String())
+}
+
+func isCommitMerged(repoURL, commitHash string) (bool, error) {
+	tmpDir := "/tmp/go-mod-check"
+	exec.Command("rm", "-rf", tmpDir).Run() // Clean up any previous temp dir
+	err := exec.Command("git", "clone", "--bare", repoURL, tmpDir).Run()
+	if err != nil {
+		return false, fmt.Errorf("failed to clone repository: %v", err)
+	}
+
+	cmd := exec.Command("git", "--git-dir="+tmpDir, "merge-base", "--is-ancestor", commitHash, "origin/main")
+	err = cmd.Run()
+
+	exec.Command("rm", "-rf", tmpDir).Run()
+
+	// If exit code is 0, commit is merged; if non-zero, it is not
+	if err == nil {
+		return true, nil
+	}
+	return false, nil
 }
